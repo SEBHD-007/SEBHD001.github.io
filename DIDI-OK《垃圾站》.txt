@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>垃圾站 | DIDI-OK</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+        }
+
+        :root {
+            --rust: #8B4513;
+            --acid: #9ACD32;
+            --toxic: #39FF14;
+            --dirt: #1a0f0a;
+            --metal: #4A4A4A;
+            --paper: #D4C4A8;
+            --blood: #8B0000;
+            --neon: #FF6B35;
+            --dark: #0d0805;
+        }
+
+        body {
+            background: var(--dirt);
+            color: var(--paper);
+            font-family: 'Press Start 2P', monospace;
+            overflow-x: hidden;
+            cursor: none;
+            line-height: 1.8;
+            font-size: 12px;
+        }
+
+        /* 自定义像素光标 */
+        .cursor {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            pointer-events: none;
+            z-index: 10000;
+            transform: translate(-50%, -50%);
+            transition: transform 0.1s;
+        }
+
+        .cursor::before {
+            content: '';
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--toxic);
+            box-shadow: 
+                0 0 10px var(--toxic),
+                4px 0 0 var(--toxic),
+                8px 0 0 var(--toxic),
+                12px 0 0 var(--toxic),
+                16px 0 0 var(--toxic),
+                4px 4px 0 var(--toxic),
+                8px 4px 0 var(--toxic),
+                12px 4px 0 var(--toxic),
+                8px 8px 0 var(--toxic);
+        }
+
+        .cursor.hover::before {
+            background: var(--neon);
+            box-shadow: 
+                0 0 15px var(--neon),
+                4px 0 0 var(--neon),
+                8px 0 0 var(--neon),
+                12px 0 0 var(--neon),
+                16px 0 0 var(--neon),
+                4px 4px 0 var(--neon),
+                8px 4px 0 var(--neon),
+                12px 4px 0 var(--neon),
+                8px 8px 0 var(--neon);
+            transform: scale(1.5);
+        }
+
+        /* 鼠标跟随粒子 */
+        .particle {
+            position: fixed;
+            width: 4px;
+            height: 4px;
+            background: var(--acid);
+            pointer-events: none;
+            z-index: 9999;
+            animation: particleFade 1s forwards;
+        }
+
+        @keyframes particleFade {
+            to {
+                transform: translateY(-50px) rotate(180deg);
+                opacity: 0;
+            }
+        }
+
+        /* CRT扫描线 */
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0,0,0,0.3) 50%,
+                rgba(0,0,0,0.3)
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 9998;
+            animation: scanline 8s linear infinite;
+        }
+
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+
+        /* 噪点 */
+        .noise {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.05;
+            pointer-events: none;
+            z-index: 9997;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* 像素边框 */
+        .pixel-border {
+            position: relative;
+            background: var(--dark);
+            border: 4px solid var(--metal);
+            box-shadow: 
+                inset -4px -4px 0px 0px rgba(0,0,0,0.5),
+                inset 4px 4px 0px 0px rgba(255,255,255,0.1),
+                0 0 0 4px var(--rust),
+                8px 8px 0px 0px rgba(0,0,0,0.4);
+        }
+
+        .pixel-border::before {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            right: -4px;
+            bottom: -4px;
+            border: 2px solid var(--acid);
+            pointer-events: none;
+            opacity: 0.3;
+        }
+
+        /* 头部 */
+        header {
+            padding: 60px 20px;
+            text-align: center;
+            border-bottom: 8px solid var(--rust);
+            background: 
+                linear-gradient(180deg, rgba(139,69,19,0.3) 0%, transparent 100%),
+                repeating-linear-gradient(90deg, transparent, transparent 20px, rgba(0,0,0,0.5) 20px, rgba(0,0,0,0.5) 40px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        h1 {
+            font-size: 3rem;
+            color: var(--acid);
+            text-transform: uppercase;
+            text-shadow: 
+                4px 4px 0 var(--rust),
+                8px 8px 0 rgba(0,0,0,0.5);
+            animation: glitch 3s infinite;
+            letter-spacing: 8px;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        @keyframes glitch {
+            0%, 100% { transform: translate(0); }
+            20% { transform: translate(-4px, 4px); }
+            40% { transform: translate(-4px, -4px); }
+            60% { transform: translate(4px, 4px); }
+            80% { transform: translate(4px, -4px); }
+        }
+
+        .subtitle {
+            color: var(--neon);
+            font-size: 0.8rem;
+            text-shadow: 2px 2px 0 rgba(0,0,0,0.8);
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        /* 警告条 */
+        .warning-strip {
+            height: 40px;
+            background: repeating-linear-gradient(
+                45deg,
+                var(--rust),
+                var(--rust) 15px,
+                #000 15px,
+                #000 30px
+            );
+            position: relative;
+            margin: 30px 0;
+            border-top: 4px solid var(--metal);
+            border-bottom: 4px solid var(--metal);
+            overflow: hidden;
+        }
+
+        .warning-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #000;
+            color: var(--acid);
+            padding: 8px 20px;
+            font-size: 0.7rem;
+            white-space: nowrap;
+            border: 2px solid var(--acid);
+            animation: warningScroll 10s linear infinite;
+        }
+
+        @keyframes warningScroll {
+            0% { transform: translate(-50%, -50%) rotate(-2deg); }
+            50% { transform: translate(-50%, -50%) rotate(2deg); }
+            100% { transform: translate(-50%, -50%) rotate(-2deg); }
+        }
+
+        /* 主容器 */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 视频区域 */
+        .video-section {
+            margin: 40px 0;
+            padding: 20px;
+            background: rgba(0,0,0,0.6);
+            border: 4px solid var(--acid);
+            box-shadow: 0 0 30px rgba(154, 205, 50, 0.2);
+        }
+
+        .video-header {
+            color: var(--acid);
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+            background: #000;
+            border: 4px solid var(--rust);
+        }
+
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .video-container video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #000;
+        }
+
+        .video-placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: var(--metal);
+            font-size: 0.8rem;
+            background: repeating-linear-gradient(
+                45deg,
+                #000,
+                #000 10px,
+                #111 10px,
+                #111 20px
+            );
+        }
+
+        /* 分析模块 */
+        .analysis-section {
+            margin: 60px 0;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: var(--neon);
+            margin-bottom: 30px;
+            padding: 15px;
+            background: rgba(139, 69, 19, 0.2);
+            border-left: 8px solid var(--neon);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+        }
+
+        .step-card {
+            background: var(--dark);
+            border: 4px solid var(--metal);
+            margin-bottom: 30px;
+            padding: 25px;
+            position: relative;
+            transition: all 0.3s steps(5);
+        }
+
+        .step-card:hover {
+            border-color: var(--acid);
+            transform: translateX(10px);
+            box-shadow: -8px 8px 0 var(--rust);
+        }
+
+        .step-number {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background: var(--blood);
+            color: white;
+            padding: 5px 15px;
+            font-size: 0.8rem;
+            border: 2px solid var(--acid);
+        }
+
+        .step-title {
+            color: var(--acid);
+            font-size: 1rem;
+            margin-bottom: 15px;
+            margin-top: 10px;
+        }
+
+        .step-content {
+            color: var(--paper);
+            font-size: 0.75rem;
+            line-height: 2;
+        }
+
+        .highlight {
+            color: var(--toxic);
+            background: rgba(57, 255, 20, 0.1);
+            padding: 2px 4px;
+        }
+
+        /* 交互式图像区域 */
+        .interactive-image {
+            width: 100%;
+            height: 400px;
+            background: #000;
+            border: 4px solid var(--rust);
+            position: relative;
+            overflow: hidden;
+            margin: 30px 0;
+            cursor: crosshair;
+        }
+
+        .visual-slots {
+            position: absolute;
+            inset: 8px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-rows: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .visual-slot {
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            place-items: center;
+            width: 100%;
+            padding: 0;
+            border: 2px dashed rgba(154, 205, 50, 0.35);
+            background: #080c08;
+            color: inherit;
+            font: inherit;
+            text-align: left;
+            cursor: zoom-in;
+            transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+        }
+
+        .visual-slot:hover {
+            border-color: var(--acid);
+            background: #11180c;
+            box-shadow: 0 0 18px rgba(154, 205, 50, 0.35);
+        }
+
+        .visual-slot::before {
+            content: attr(data-slot);
+            position: absolute;
+            top: 8px;
+            left: 10px;
+            z-index: 1;
+            color: rgba(154, 205, 50, 0.65);
+            font-size: 0.7rem;
+        }
+
+        .visual-slot::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            background: repeating-linear-gradient(0deg, rgba(154, 205, 50, 0.12) 0 1px, transparent 1px 4px);
+            opacity: 0.25;
+        }
+
+        .visual-slot:hover::after {
+            background: linear-gradient(to bottom, transparent 42%, rgba(57, 255, 20, 0.65) 50%, transparent 58%);
+            background-size: 100% 220%;
+            animation: visualSweep 1s linear infinite;
+            opacity: 0.85;
+        }
+
+        @keyframes visualSweep {
+            from { background-position: 0 -110%; }
+            to { background-position: 0 110%; }
+        }
+
+        .visual-slot img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.25s, filter 0.25s;
+        }
+
+        .visual-slot:hover img,
+        .visual-slot:focus-visible img {
+            transform: scale(1.04);
+            filter: saturate(1.2) contrast(1.08);
+        }
+
+        .visual-slot:focus-visible {
+            outline: 3px solid var(--toxic);
+            outline-offset: -5px;
+        }
+
+        .pixel-grid {
+            position: absolute;
+            inset: 8px;
+            z-index: 2;
+            pointer-events: none;
+            display: grid;
+            grid-template-columns: repeat(20, 1fr);
+            grid-template-rows: repeat(10, 1fr);
+        }
+
+        .image-viewer {
+            width: min(92vw, 1100px);
+            max-width: none;
+            max-height: 92vh;
+            padding: 0;
+            border: 4px solid var(--acid);
+            background: var(--dark);
+            color: var(--paper);
+            box-shadow: 8px 8px 0 var(--rust);
+        }
+
+        .image-viewer::backdrop {
+            background: rgba(0, 0, 0, 0.88);
+        }
+
+        .image-viewer__bar {
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 8px 12px;
+            color: var(--acid);
+            font-size: 0.7rem;
+        }
+
+        .image-viewer__close {
+            width: 36px;
+            height: 36px;
+            border: 2px solid var(--rust);
+            background: #000;
+            color: var(--paper);
+            font: inherit;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        .image-viewer__close:hover,
+        .image-viewer__close:focus-visible {
+            border-color: var(--acid);
+            color: var(--acid);
+        }
+
+        .image-viewer__image {
+            display: block;
+            max-width: calc(92vw - 16px);
+            max-height: calc(92vh - 64px);
+            width: auto;
+            height: auto;
+            margin: 0 auto 8px;
+            object-fit: contain;
+
+        .pixel-cell {
+            border: 1px solid rgba(154, 205, 50, 0.1);
+            transition: all 0.3s;
+        }
+
+        .pixel-cell:hover {
+            background: rgba(154, 205, 50, 0.3);
+            box-shadow: 0 0 20px var(--acid);
+        }
+
+        /* 术语标签 */
+        .term-tag {
+            display: inline-block;
+            background: var(--rust);
+            color: white;
+            padding: 4px 8px;
+            margin: 2px;
+            font-size: 0.6rem;
+            border: 2px solid var(--metal);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .term-tag:hover {
+            background: var(--acid);
+            color: #000;
+            transform: scale(1.1);
+        }
+
+        /* 底部 */
+        footer {
+            margin-top: 80px;
+            padding: 40px;
+            text-align: center;
+            border-top: 4px solid var(--rust);
+            color: var(--metal);
+            font-size: 0.7rem;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            h1 { font-size: 1.5rem; }
+            .step-card { padding: 15px; }
+            body { font-size: 10px; }
+        }
+
+        /* 打字机效果 */
+        .typing {
+            overflow: hidden;
+            border-right: 4px solid var(--acid);
+            white-space: nowrap;
+            animation: typing 3s steps(40) 1s both, blink-caret 0.75s step-end infinite;
+            display: inline-block;
+        }
+
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+
+        @keyframes blink-caret {
+            from, to { border-color: transparent; }
+            50% { border-color: var(--acid); }
+        }
+
+        /* 加载动画 */
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--dirt);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            transition: opacity 0.5s;
+        }
+
+        .loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loader-text {
+            color: var(--acid);
+            font-size: 1rem;
+            margin-top: 20px;
+            animation: blink 1s infinite;
+        }
+
+        .loader-bar {
+            width: 300px;
+            height: 24px;
+            border: 4px solid var(--acid);
+            padding: 2px;
+            background: #000;
+        }
+
+        .loader-progress {
+            height: 100%;
+            background: var(--acid);
+            width: 0%;
+            animation: load 2s steps(20) forwards;
+        }
+
+        @keyframes load {
+            to { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 自定义光标 -->
+    <div class="cursor" id="cursor"></div>
+
+    <!-- 加载画面 -->
+    <div class="loader" id="loader">
+        <div class="loader-bar">
+            <div class="loader-progress"></div>
+        </div>
+        <div class="loader-text">LOADING ANALYSIS PROTOCOL...</div>
+    </div>
+
+    <!-- 特效层 -->
+    <div class="scanlines"></div>
+    <div class="noise"></div>
+
+    <!-- 头部 -->
+    <header>
+        <div class="pixel-border" style="display: inline-block; padding: 30px; background: rgba(0,0,0,0.7);">
+            <h1>《垃圾站》</h1>
+            <div class="subtitle typing">//DIDI-OK 'Garbage Station' UP Animation Analysis //</div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="warning-strip">
+            <div class="warning-text">⚠ ANALYZING VISUAL DATA - CLEARANCE LEVEL 6 REQUIRED ⚠</div>
+        </div>
+
+        <!-- 视频区域 -->
+        <section class="video-section pixel-border">
+            <div class="video-header">
+                <span style="color: var(--blood);">●</span> 
+                <span>VIDEO_STREAM: 《垃圾站》SHORT FILM</span>
+            </div>
+            <div class="video-container">
+                <video src="垃圾站.mp4" controls preload="metadata" playsinline>
+                    您的浏览器不支持 HTML 视频播放。
+                </video>
+            </div>
+        </section>
+
+        <!-- 交互图像区 -->
+        <div class="interactive-image pixel-border" id="interactiveArea">
+            <div class="visual-slots">
+                <button class="visual-slot" type="button" data-slot="01" aria-label="放大查看图片 1">
+                    <img src="1.png" alt="图片 1" loading="lazy">
+                </button>
+                <button class="visual-slot" type="button" data-slot="02" aria-label="放大查看图片 2">
+                    <img src="2.png" alt="图片 2" loading="lazy">
+                </button>
+                <button class="visual-slot" type="button" data-slot="03" aria-label="放大查看图片 3">
+                    <img src="3.png" alt="图片 3" loading="lazy">
+                </button>
+                <button class="visual-slot" type="button" data-slot="04" aria-label="放大查看图片 4">
+                    <img src="4.png" alt="图片 4" loading="lazy">
+                </button>
+            </div>
+            <div class="pixel-grid" id="pixelGrid"></div>
+            <div style="position: absolute; bottom: 20px; left: 20px; color: var(--acid); font-size: 0.7rem; z-index: 3;">
+                >> HOVER TO SCAN VISUAL DATA
+            </div>
+        </div>
+
+        <dialog class="image-viewer" id="imageViewer" aria-label="图片查看器">
+            <div class="image-viewer__bar">
+                <span id="imageViewerLabel">VISUAL DATA</span>
+                <button class="image-viewer__close" type="button" id="closeImageViewer" aria-label="关闭图片">×</button>
+            </div>
+            <img class="image-viewer__image" id="imageViewerImage" alt="">
+        </dialog>
+
+        <!-- 第一遍：直觉反应 -->
+        <section class="analysis-section">
+            <h2 class="section-title">01 // 直觉反应协议</h2>
+            <div class="step-card pixel-border">
+                <div class="step-number">STEP 01</div>
+                <div class="step-title">第一印象记录</div>
+                <div class="step-content">
+                    <p><span class="highlight">最打动你的瞬间：</span>在《垃圾站》中，当主角在废墟中翻找时突然停顿的那个长镜头，手持摄影的轻微晃动配合环境音的突然抽离，制造了强烈的间离效果。</p>
+                    <br>
+                    <p><span class="highlight">情绪曲线：</span>从开场的压抑(低角度、冷色调)→中段的焦虑(快速剪辑、手持晃动)→结尾的虚无(固定镜头、长曝光)。</p>
+                    <br>
+                    <p><span class="highlight">困惑点：</span>第3分20秒处的跳切是否故意打破连续性？这种断裂感是叙事策略还是技术限制？</p>
+                    <br>
+                    <div style="margin-top: 15px;">
+                        <span class="term-tag">手持摄影</span>
+                        <span class="term-tag">跳切</span>
+                        <span class="term-tag">环境音</span>
+                        <span class="term-tag">长镜头</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 第二遍：视听语言 -->
+        <section class="analysis-section">
+            <h2 class="section-title">02 // 视听语言解码</h2>
+            
+            <div class="step-card pixel-border">
+                <div class="step-number">02-A</div>
+                <div class="step-title">摄影机制</div>
+                <div class="step-content">
+                    <p><span class="highlight">景别策略：</span>大量使用<span class="highlight">特写</span>（垃圾细节、手部动作）与<span class="highlight">大远景</span>（人物在垃圾山中的渺小）的极端对比，强化人的异化。</p>
+                    <p><span class="highlight">角度：</span>低角度拍摄垃圾堆，使其显得压迫性高大；俯拍人物，显示其被困状态。</p>
+                    <p><span class="highlight">光影：</span>自然光主义，利用垃圾站固有的顶灯制造<span class="highlight">高反差</span>，阴影区域吞噬细节，象征信息的缺失。</p>
+                </div>
+            </div>
+
+            <div class="step-card pixel-border">
+                <div class="step-number">02-B</div>
+                <div class="step-title">剪辑节奏</div>
+                <div class="step-content">
+                    <p><span class="highlight">蒙太奇：</span>垃圾堆积的<span class="highlight">积累蒙太奇</span>，通过重复意象建立主题。</p>
+                    <p><span class="highlight">转场：</span>硬切为主，拒绝流畅性，模拟记忆的碎片化。</p>
+                    <p><span class="highlight">时空省略：</span>黑场过渡，暗示时间的流逝与停滞并存。</p>
+                </div>
+            </div>
+
+            <div class="step-card pixel-border">
+                <div class="step-number">02-C</div>
+                <div class="step-title">声音设计</div>
+                <div class="step-content">
+                    <p><span class="highlight">声画对位：</span>画面静止时，环境音（风声、金属碰撞）持续，创造<span class="highlight">画外空间</span>的想象。</p>
+                    <p><span class="highlight">静默：</span>关键情绪点的完全静默，比音乐更具冲击力。</p>
+                    <p><span class="highlight">音效：</span>放大垃圾的质感声音（塑料的脆响、金属的沉闷），赋予废弃物主体性。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 第三遍：叙事结构 -->
+        <section class="analysis-section">
+            <h2 class="section-title">03 // 叙事与人物弧光</h2>
+            <div class="step-card pixel-border">
+                <div class="step-number">03</div>
+                <div class="step-title">结构分析</div>
+                <div class="step-content">
+                    <p><span class="highlight">非线性叙事：</span>通过垃圾的"考古层"展开回忆，现在与过去交织。</p>
+                    <p><span class="highlight">视角：</span>限制性视角，观众与主角知道的一样多，共同"发现"。</p>
+                    <p><span class="highlight">冲突：</span>人与环境的冲突（生存）→人与自我的冲突（记忆）→人与时间的冲突（遗忘）。</p>
+                    <p><span class="highlight">结局：</span>开放性，垃圾站的灯光熄灭，暗示循环的终结或开始。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 第四遍：表演与调度 -->
+        <section class="analysis-section">
+            <h2 class="section-title">04 // 表演与场面调度</h2>
+            <div class="step-card pixel-border">
+                <div class="step-number">04</div>
+                <div class="step-title">身体与空间</div>
+                <div class="step-content">
+                    <p><span class="highlight">表演风格：</span>非职业演员的<span class="highlight">纪实性表演</span>，肢体僵硬但真实，与环境的互动（翻找、攀爬）成为主要叙事动作。</p>
+                    <p><span class="highlight">权力关系：</span>通过<span class="highlight">俯拍与仰拍</span>的交替，表现人在垃圾面前的卑微与征服欲的矛盾。</p>
+                    <p><span class="highlight">长镜头调度：</span>3分钟一镜到底的翻找场景，演员走位与镜头运动形成<span class="highlight">舞蹈般的韵律</span>，疲惫感通过重复动作传递。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 第五遍：类型与语境 -->
+        <section class="analysis-section">
+            <h2 class="section-title">05 // 类型与作者语境</h2>
+            <div class="step-card pixel-border">
+                <div class="step-number">05</div>
+                <div class="step-title">文化坐标</div>
+                <div class="step-content">
+                    <p><span class="highlight">类型融合：</span>废土朋克 + 社会纪实 + 心理惊悚。遵循<span class="highlight">意大利新现实主义</span>的实景拍摄，但加入表现主义光影。</p>
+                    <p><span class="highlight">作者印记：</span>DIDI-OKB站标志性的<span class="highlight">废墟美学</span>与<span class="highlight">底层视角</span>，关注消费主义背后的废弃物。</p>
+                    <p><span class="highlight">意识形态：</span>对现代性废弃物的凝视，阶级视角下的"垃圾"作为被忽视的历史见证。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 第六遍：主题 -->
+        <section class="analysis-section">
+            <h2 class="section-title">06 // 主题与个人反应</h2>
+            <div class="step-card pixel-border">
+                <div class="step-number">06</div>
+                <div class="step-title">母题与意象</div>
+                <div class="step-content">
+                    <p><span class="highlight">核心母题：</span>废弃与重生、记忆与遗忘、消费与浪费。</p>
+                    <p><span class="highlight">意象系统：</span>垃圾山（历史堆积）、手电筒光（有限的认知）、雨水（时间的侵蚀）。</p>
+                    <p><span class="highlight">个人反应：</span>影片迫使我思考：我们丢弃的不仅是物品，还有与物品相关的记忆。当主角在垃圾中找到那张照片时，我意识到<span class="highlight">垃圾站是城市的潜意识</span>。</p>
+                    <br>
+                    <p style="color: var(--neon); font-size: 0.8rem; margin-top: 20px;">
+                        >> 导演用手持摄影的颤抖、自然光的残酷、非职业表演的笨拙，让我产生了"这就是真实"的错觉，进而质疑真实本身。
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 拉片指南 -->
+        <section class="analysis-section">
+            <h2 class="section-title">07 // 拉片实操指南</h2>
+            <div class="step-card pixel-border">
+                <div class="step-number">GUIDE</div>
+                <div class="step-title">3-5分钟关键片段分析模板</div>
+                <div class="step-content">
+                    <p>选择片段：<span class="highlight">02:15 - 05:30</span>（发现照片场景）</p>
+                    <br>
+                    <p>1. <span class="highlight">逐镜头记录</span>：景别变化（特写→中景→特写）</p>
+                    <p>2. <span class="highlight">机位运动</span>：手持跟随→固定→缓慢推进</p>
+                    <p>3. <span class="highlight">光色变化</span>：冷蓝→暖黄（回忆色彩）</p>
+                    <p>4. <span class="highlight">声音层次</span>：环境音→心跳声→静默</p>
+                    <p>5. <span class="highlight">表演细节</span>：手部颤抖、呼吸节奏、视线方向</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <footer>
+        <div>ANALYSIS COMPLETE // WASTELAND ARCHIVE v2.077</div>
+        <div style="margin-top: 10px; color: var(--rust);">DIDI-OKB STATION FILM CRITIQUE PROTOCOL</div>
+    </footer>
+
+    <script>
+        const filmVideo = document.querySelector('video');
+        filmVideo.muted = false;
+        filmVideo.volume = 1;
+
+        // 自定义光标
+        const cursor = document.getElementById('cursor');
+        let mouseX = 0, mouseY = 0;
+        let cursorX = 0, cursorY = 0;
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            
+            // 创建粒子
+            if(Math.random() > 0.9) {
+                createParticle(e.clientX, e.clientY);
+            }
+        });
+
+        // 平滑跟随
+        function animateCursor() {
+            cursorX += (mouseX - cursorX) * 0.2;
+            cursorY += (mouseY - cursorY) * 0.2;
+            cursor.style.left = cursorX + 'px';
+            cursor.style.top = cursorY + 'px';
+            requestAnimationFrame(animateCursor);
+        }
+        animateCursor();
+
+        // 悬停效果
+        document.querySelectorAll('a, button, .step-card, .term-tag, .pixel-cell').forEach(el => {
+            el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
+            el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+        });
+
+        // 粒子效果
+        function createParticle(x, y) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = x + 'px';
+            particle.style.top = y + 'px';
+            particle.style.background = Math.random() > 0.5 ? 'var(--acid)' : 'var(--neon)';
+            document.body.appendChild(particle);
+            
+            setTimeout(() => particle.remove(), 1000);
+        }
+
+        // 生成交互网格
+        const grid = document.getElementById('pixelGrid');
+        for(let i = 0; i < 200; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'pixel-cell';
+            grid.appendChild(cell);
+        }
+
+        // 图片查看器
+        const imageViewer = document.getElementById('imageViewer');
+        const imageViewerImage = document.getElementById('imageViewerImage');
+        const imageViewerLabel = document.getElementById('imageViewerLabel');
+        document.querySelectorAll('.visual-slot').forEach((slot) => {
+            slot.addEventListener('click', () => {
+                const image = slot.querySelector('img');
+                imageViewerImage.src = image.src;
+                imageViewerImage.alt = image.alt;
+                imageViewerLabel.textContent = `VISUAL DATA // ${slot.dataset.slot}`;
+                imageViewer.showModal();
+            });
+        });
+        document.getElementById('closeImageViewer').addEventListener('click', () => imageViewer.close());
+        imageViewer.addEventListener('click', (event) => {
+            if(event.target === imageViewer) imageViewer.close();
+        });
+
+        // 加载动画
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('loader').classList.add('hidden');
+            }, 2000);
+        });
+
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 'Escape') {
+                if(imageViewer.open) imageViewer.close();
+                else window.scrollTo({top: 0, behavior: 'smooth'});
+            }
+        });
+    </script>
+</body>
+</html>
